@@ -25,14 +25,14 @@ app.use(cookieParser());
 
 // CORS: allow all origins
 app.use(cors({
-  origin: "https://linkedin-8zi4c0vz2-hatims-projects-d499498d.vercel.app/",      // allow all origins
+  origin: "https://linkedin-8zi4c0vz2-hatims-projects-d499498d.vercel.app",      // allow all origins
   credentials: true  // NOTE: credentials won't work with '*' in some browsers
 }));
 
 // Socket.io setup
 export const io = new Server(server, {
   cors: {
-    origin: "https://linkedin-8zi4c0vz2-hatims-projects-d499498d.vercel.app/",     // allow all origins
+    origin: "https://linkedin-8zi4c0vz2-hatims-projects-d499498d.vercel.app",     // allow all origins
     credentials: true
   }
 });
