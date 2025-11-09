@@ -105,10 +105,7 @@ getPost()
         <div className='text-[22px]'>{`${userData.firstName} ${userData.lastName}`}</div>
         </div>
       <textarea className={`w-full ${frontendImage?"h-[200px]":"h-[550px]"} outline-none border-none p-[10px] resize-none text-[19px]`} placeholder='what do you want to talk about..?' value={description} onChange={(e)=>setDescription(e.target.value)}></textarea>
-      <input type="file" ref={image} hidden onChange={handleImage}/>
-          <div className='w-full h-[300px] overflow-hidden flex justify-center items-center rounded-lg' >
-            <img src={frontendImage || ""} alt="" className='h-full rounded-lg'/>
-          </div>
+      
       
 
 
