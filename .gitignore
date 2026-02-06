@@ -9,3 +9,29 @@ node_modules/
 
 # Logs
 *.log
+
+# Flutter-specific files
+/frontend/.dart_tool/
+/frontend/.flutter-plugins
+/frontend/.flutter-plugins-dependencies
+/frontend/.packages
+/frontend/build/
+/frontend/pubspec.lock
+
+# macOS-specific files
+.DS_Store
+
+# IDE-specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vercel build output
+.vercel/
+
+# Miscellaneous
+*.swp
+*.swo
+*.tmp
+*.bak
