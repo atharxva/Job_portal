@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/notification_model.dart';
+import '../models/job_model.dart';
+import '../models/application_model.dart';
 
 class ApiService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS simulator/web
@@ -43,7 +45,7 @@ class ApiService {
   }
 
   // Sign Up
-  Future<Map<String, dynamic>> signUp(String firstName, String lastName, String userName, String email, String password) async {
+  Future<Map<String, dynamic>> signUp(String firstName, String lastName, String userName, String email, String password, String role) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/signup'),
@@ -54,6 +56,7 @@ class ApiService {
           'userName': userName,
           'email': email,
           'password': password,
+          'role': role,
         }),
       );
 
@@ -130,6 +133,143 @@ class ApiService {
 
     if (response.statusCode != 200) {
       throw Exception('Failed to clear notifications');
+    }
+  }
+
+  // --- Jobs ---
+
+  Future<List<JobModel>> getAllJobs() async {
+    final token = await _getToken();
+    if (token == null) throw Exception('No token found');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/jobs/all'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => JobModel.fromJson(json)).toList();
+    } else {
+       throw Exception('Failed to load jobs');
+    }
+  }
+
+  Future<List<JobModel>> getMyJobs() async {
+    final token = await _getToken();
+     if (token == null) throw Exception('No token found');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/jobs/myjobs'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => JobModel.fromJson(json)).toList();
+    } else {
+       throw Exception('Failed to load my jobs');
+    }
+  }
+
+  Future<JobModel> createJob(JobModel job) async {
+    final token = await _getToken();
+     if (token == null) throw Exception('No token found');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/jobs/create'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'title': job.title,
+        'description': job.description,
+        'company': job.company,
+        'location': job.location,
+        'salary': job.salary,
+        'requirements': job.requirements,
+        'contactName': job.contactName,
+        'contactEmail': job.contactEmail,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return JobModel.fromJson(jsonDecode(response.body));
+    } else {
+       throw Exception('Failed to create job: ${response.body}');
+    }
+  }
+
+  // --- Applications ---
+
+  Future<void> applyForJob(String jobId) async {
+    final token = await _getToken();
+     if (token == null) throw Exception('No token found');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/applications/apply'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'jobId': jobId}),
+    );
+
+    if (response.statusCode != 201) {
+       throw Exception('Failed to apply: ${response.body}');
+    }
+  }
+
+  Future<List<ApplicationModel>> getMyApplications() async {
+    final token = await _getToken();
+     if (token == null) throw Exception('No token found');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/applications/myapplications'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+       final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => ApplicationModel.fromJson(json)).toList();
+    } else {
+       throw Exception('Failed to load my applications');
+    }
+  }
+
+  Future<List<ApplicationModel>> getJobApplications(String jobId) async {
+    final token = await _getToken();
+     if (token == null) throw Exception('No token found');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/applications/job/$jobId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+       final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => ApplicationModel.fromJson(json)).toList();
+    } else {
+       throw Exception('Failed to load applications');
+    }
+  }
+
+  Future<void> updateApplicationStatus(String applicationId, String status) async {
+    final token = await _getToken();
+     if (token == null) throw Exception('No token found');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/applications/status/$applicationId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'status': status}),
+    );
+
+     if (response.statusCode != 200) {
+       throw Exception('Failed to update status');
     }
   }
 }
