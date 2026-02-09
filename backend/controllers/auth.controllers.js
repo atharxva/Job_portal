@@ -3,7 +3,7 @@ import User from "../models/user.model.js"
 import bcrypt from "bcryptjs"
 export const signUp = async (req, res) => {
     try {
-        const { firstName, lastName, userName, email, password } = req.body
+        const { firstName, lastName, userName, email, password, role, about } = req.body
         let existEmail = await User.findOne({ email })
         if (existEmail) {
             return res.status(400).json({ message: "email already exist !" })
@@ -23,7 +23,9 @@ export const signUp = async (req, res) => {
             lastName,
             userName,
             email,
-            password: hassedPassword
+            password: hassedPassword,
+            role,
+            about
         })
 
         let token = await genToken(user._id)

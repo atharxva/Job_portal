@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'notification_screen.dart';
 import 'signup_screen.dart';
+import 'recruiter_dashboard.dart';
+import 'candidate_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? requiredRole;
+  const LoginScreen({super.key, this.requiredRole});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,14 +21,35 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
-      await _apiService.login(
+      final data = await _apiService.login(
         _emailController.text,
         _passwordController.text,
       );
+      
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const NotificationScreen()),
-        );
+        final user = data['user'];
+        final role = user['role'] ?? 'candidate';
+
+        // Check if user role matches the required portal role
+        if (widget.requiredRole != null && role != widget.requiredRole) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Access Denied: Please use the ${role == 'recruiter' ? 'Recruitment' : 'Job'} Portal.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        if (role == 'recruiter') {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const RecruiterDashboard()),
+            );
+        } else {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const CandidateDashboard()),
+            );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -69,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                  MaterialPageRoute(builder: (_) => SignUpScreen(requiredRole: widget.requiredRole)),
                 );
               },
               child: const Text('Don\'t have an account? Sign Up'),

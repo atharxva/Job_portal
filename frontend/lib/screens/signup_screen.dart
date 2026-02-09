@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'notification_screen.dart';
+import 'candidate_dashboard.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final String? requiredRole;
+  const SignUpScreen({super.key, this.requiredRole});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -17,6 +18,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _apiService = ApiService();
   bool _isLoading = false;
+  late String _selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.requiredRole ?? 'candidate';
+  }
 
   Future<void> _signUp() async {
     setState(() => _isLoading = true);
@@ -27,11 +35,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _userNameController.text,
         _emailController.text,
         _passwordController.text,
+        _selectedRole,
       );
+      
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const NotificationScreen()),
-        );
+        // Redirect based on role
+        if (_selectedRole == 'recruiter') {
+             ScaffoldMessenger.of(context).showSnackBar(
+               const SnackBar(content: Text('Recruiter account created! Please login.')),
+             );
+              // Navigate back to login
+              Navigator.pop(context); 
+        } else {
+             // Navigate to Candidate Dashboard
+             Navigator.of(context).pushReplacement(
+               MaterialPageRoute(builder: (_) => const CandidateDashboard()),
+             );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -73,6 +93,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
               controller: _passwordController,
               decoration: const InputDecoration(labelText: 'Password (min 8 chars)'),
               obscureText: true,
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: _selectedRole,
+              decoration: const InputDecoration(labelText: 'I am a'),
+              items: const [
+                DropdownMenuItem(value: 'candidate', child: Text('Candidate')),
+                DropdownMenuItem(value: 'recruiter', child: Text('Recruiter')),
+              ],
+              onChanged: widget.requiredRole != null 
+                  ? null // Disable if role is enforced
+                  : (value) {
+                      setState(() {
+                        _selectedRole = value!;
+                      });
+                    },
             ),
             const SizedBox(height: 20),
             ElevatedButton(
