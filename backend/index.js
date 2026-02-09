@@ -25,8 +25,8 @@ app.use(cookieParser());
 
 // CORS: allow all origins
 app.use(cors({
-  origin: "https://linkedin-mocha.vercel.app",      // allow all origins
-  credentials: true  // NOTE: credentials won't work with '*' in some browsers
+  origin: true, // Allow all origins dynamically (required for localhost with credentials)
+  credentials: true
 }));
 
 // Socket.io setup
