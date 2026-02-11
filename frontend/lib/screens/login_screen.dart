@@ -42,10 +42,12 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         if (role == 'recruiter') {
+            await _apiService.saveRole('recruiter');
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const RecruiterDashboard()),
             );
         } else {
+            await _apiService.saveRole('candidate');
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const CandidateDashboard()),
             );

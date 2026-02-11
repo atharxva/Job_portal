@@ -150,11 +150,39 @@ class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
                                           DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
                                         ],
                                         onChanged: (val) {
-                                          if (val != null) _updateStatus(app.id, val);
+                                          if (val == 'interview') {
+                                            _showScheduleDialog(app.id);
+                                          } else if (val != null) {
+                                            _updateStatus(app.id, val);
+                                          }
                                         },
                                       ),
                                     ],
-                                  )
+                                  ),
+                                  if (app.interviewDate != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.event, size: 16, color: Colors.orange),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Interview: ${app.interviewDate!.day}/${app.interviewDate!.month}',
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          const Icon(Icons.location_on, size: 16, color: Colors.orange),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              app.interviewLocation ?? 'Online',
+                                              style: const TextStyle(fontSize: 12, color: Colors.orange),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -167,6 +195,62 @@ class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
         },
       ),
     );
+  }
+
+  void _showScheduleDialog(String applicationId) async {
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    final TextEditingController locationController = TextEditingController(text: 'Google Meet / Office');
+
+    final bool? schedule = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Schedule Interview'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Select Date'),
+              subtitle: Text('${selectedDate.toLocal()}'.split(' ')[0]),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () async {
+                final DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                if (picked != null) selectedDate = picked;
+              },
+            ),
+            TextField(
+              controller: locationController,
+              decoration: const InputDecoration(labelText: 'Location / Link'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm Schedule'),
+          ),
+        ],
+      ),
+    );
+
+    if (schedule == true) {
+      try {
+        await _apiService.scheduleInterview(applicationId, selectedDate, locationController.text);
+        _fetchApplications();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Interview scheduled!')));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
   }
 
   Color _getStatusColor(String status) {

@@ -23,6 +23,12 @@ const applicationSchema = new mongoose.Schema({
     coverLetter: {
         type: String,
         default: ""
+    },
+    interviewDate: {
+        type: Date
+    },
+    interviewLocation: {
+        type: String
     }
 }, { timestamps: true });
 
