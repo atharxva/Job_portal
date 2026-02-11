@@ -63,13 +63,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isApplying ? null : _apply,
+                onPressed: (widget.job.isApplied || _isApplying) ? null : _apply,
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.job.isApplied ? Colors.grey : Colors.blueAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isApplying 
                   ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text('Apply Now'),
+                  : Text(widget.job.isApplied ? 'Application Submitted' : 'Apply Now'),
               ),
             ),
           ],

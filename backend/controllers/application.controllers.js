@@ -30,7 +30,7 @@ export const applyForJob = async (req, res) => {
 export const getMyApplications = async (req, res) => {
     try {
         const applications = await Application.find({ applicant: req.userId })
-            .populate("job", "title company location salary")
+            .populate("job")
             .sort({ createdAt: -1 });
         return res.status(200).json(applications);
     } catch (error) {
@@ -69,5 +69,32 @@ export const updateApplicationStatus = async (req, res) => {
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Error updating status" });
+    }
+};
+
+export const withdrawApplication = async (req, res) => {
+    try {
+        const { applicationId } = req.params;
+
+        const application = await Application.findById(applicationId);
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        // Check ownership
+        if (application.applicant.toString() !== req.userId) {
+            return res.status(403).json({ message: "Unauthorized to withdraw this application" });
+        }
+
+        const jobId = application.job;
+        await Application.findByIdAndDelete(applicationId);
+
+        // Remove applicant from Job model
+        await Job.findByIdAndUpdate(jobId, { $pull: { applicants: req.userId } });
+
+        return res.status(200).json({ message: "Application withdrawn successfully" });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Error withdrawing application" });
     }
 };

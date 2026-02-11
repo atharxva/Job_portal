@@ -23,7 +23,7 @@ class ApplicationModel {
           : json['job'] ?? '',
       applicant: json['applicant'], 
       status: json['status'] ?? 'applied',
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
     );
   }
 }

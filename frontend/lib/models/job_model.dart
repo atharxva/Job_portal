@@ -11,6 +11,7 @@ class JobModel {
   final Map<String, dynamic>? postedBy;
   final List<String> applicants;
   final DateTime createdAt;
+  final bool isApplied;
 
   JobModel({
     required this.id,
@@ -25,6 +26,7 @@ class JobModel {
     this.postedBy,
     required this.applicants,
     required this.createdAt,
+    this.isApplied = false,
   });
 
   factory JobModel.fromJson(Map<String, dynamic> json) {
@@ -40,7 +42,8 @@ class JobModel {
       requirements: List<String>.from(json['requirements'] ?? []),
       postedBy: json['postedBy'] is Map<String, dynamic> ? json['postedBy'] : null,
       applicants: List<String>.from(json['applicants'] ?? []),
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      isApplied: json['isApplied'] ?? false,
     );
   }
 }

@@ -13,20 +13,37 @@ class JobApplicationsScreen extends StatefulWidget {
 class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
   final ApiService _apiService = ApiService();
   late Future<List<ApplicationModel>> _applicationsFuture;
+  List<ApplicationModel> _allApplications = [];
+  List<ApplicationModel> _filteredApplications = [];
+  String _selectedStatus = 'all';
 
   @override
   void initState() {
     super.initState();
+    _fetchApplications();
+  }
+
+  void _fetchApplications() async {
     _applicationsFuture = _apiService.getJobApplications(widget.jobId);
+    _allApplications = await _applicationsFuture;
+    _filterApplications();
+  }
+
+  void _filterApplications() {
+    setState(() {
+      if (_selectedStatus == 'all') {
+        _filteredApplications = _allApplications;
+      } else {
+        _filteredApplications = _allApplications.where((app) => app.status == _selectedStatus).toList();
+      }
+    });
   }
 
   Future<void> _updateStatus(String applicationId, String newStatus) async {
     try {
       await _apiService.updateApplicationStatus(applicationId, newStatus);
       if (mounted) {
-        setState(() {
-          _applicationsFuture = _apiService.getJobApplications(widget.jobId);
-        });
+        _fetchApplications();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Status updated')),
         );
@@ -43,71 +60,122 @@ class _JobApplicationsScreenState extends State<JobApplicationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Applications')),
+      appBar: AppBar(title: const Text('Job Applications')),
       body: FutureBuilder<List<ApplicationModel>>(
         future: _applicationsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting && _allApplications.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No applications yet.'));
           }
 
-          final applications = snapshot.data!;
-          return ListView.builder(
-            itemCount: applications.length,
-            itemBuilder: (context, index) {
-              final app = applications[index];
-              final applicant = app.applicant as Map<String, dynamic>; // Assuming populated
-
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: applicant['profileImage'] != null && applicant['profileImage'].isNotEmpty
-                              ? NetworkImage(applicant['profileImage'])
-                              : null,
-                          child: applicant['profileImage'] == null || applicant['profileImage'].isEmpty
-                              ? Text(applicant['firstName'][0])
-                              : null,
-                        ),
-                        title: Text('${applicant['firstName']} ${applicant['lastName']}'),
-                        subtitle: Text(applicant['email']),
+          return Column(
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: ['all', 'applied', 'interview', 'hired', 'rejected'].map((status) {
+                    final isSelected = _selectedStatus == status;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(status.toUpperCase(), style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
+                        selected: isSelected,
+                        selectedColor: _getStatusColor(status),
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedStatus = status;
+                            _filterApplications();
+                          });
+                        },
                       ),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Status: ${app.status.toUpperCase()}',
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          DropdownButton<String>(
-                            value: app.status,
-                            items: const [
-                              DropdownMenuItem(value: 'applied', child: Text('Applied')),
-                              DropdownMenuItem(value: 'interview', child: Text('Interview')),
-                              DropdownMenuItem(value: 'hired', child: Text('Hired')),
-                              DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) _updateStatus(app.id, val);
-                            },
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
+                    );
+                  }).toList(),
                 ),
-              );
-            },
+              ),
+              Expanded(
+                child: _filteredApplications.isEmpty
+                    ? Center(child: Text('No $_selectedStatus applications.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _filteredApplications.length,
+                        itemBuilder: (context, index) {
+                          final app = _filteredApplications[index];
+                          final applicant = app.applicant as Map<String, dynamic>;
+
+                          return Card(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            elevation: 2,
+                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: CircleAvatar(
+                                      backgroundImage: applicant['profileImage'] != null && applicant['profileImage'].isNotEmpty
+                                          ? NetworkImage(applicant['profileImage'])
+                                          : null,
+                                      child: applicant['profileImage'] == null || applicant['profileImage'].isEmpty ? Text(applicant['firstName'][0]) : null,
+                                    ),
+                                    title: Text('${applicant['firstName']} ${applicant['lastName']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text(applicant['email']),
+                                  ),
+                                  const Divider(),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusColor(app.status).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          app.status.toUpperCase(),
+                                          style: TextStyle(color: _getStatusColor(app.status), fontWeight: FontWeight.bold, fontSize: 12),
+                                        ),
+                                      ),
+                                      DropdownButton<String>(
+                                        value: app.status,
+                                        underline: Container(),
+                                        icon: const Icon(Icons.edit_outlined, size: 20),
+                                        items: const [
+                                          DropdownMenuItem(value: 'applied', child: Text('Applied')),
+                                          DropdownMenuItem(value: 'interview', child: Text('Interview')),
+                                          DropdownMenuItem(value: 'hired', child: Text('Hired')),
+                                          DropdownMenuItem(value: 'rejected', child: Text('Rejected')),
+                                        ],
+                                        onChanged: (val) {
+                                          if (val != null) _updateStatus(app.id, val);
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'hired': return Colors.green;
+      case 'rejected': return Colors.red;
+      case 'interview': return Colors.orange;
+      case 'all': return Colors.blueAccent;
+      default: return Colors.blue;
+    }
   }
 }
