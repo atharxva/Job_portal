@@ -117,23 +117,25 @@ export const deleteJob = async (req, res) => {
 };
 
 export const getRecruiterStats = async (req, res) => {
+    console.log(`[Stats Request] User: ${req.userId}`);
     try {
         const recruiterId = req.userId;
 
         // Ensure only recruiters can access analytics
         const user = await User.findById(recruiterId);
         if (!user || user.role !== "recruiter") {
+            console.log(`[Stats Denied] User is not a recruiter. Role: ${user?.role}`);
             return res.status(403).json({ message: "Only recruiters can access hiring analytics" });
         }
 
         // 1. Total Jobs Posted by this recruiter
-        const totalJobs = await Job.countDocuments({ postedBy: recruiterId });
+        const totalJobs = await Job.countDocuments({ postedBy: recruiterId }) || 0;
 
         // 2. Total Applications received for all jobs by this recruiter
-        const myJobs = await Job.find({ postedBy: recruiterId }).select('_id title applicants');
+        const myJobs = await Job.find({ postedBy: recruiterId }).select('_id title applicants') || [];
         const jobIds = myJobs.map(job => job._id);
 
-        const applications = await Application.find({ job: { $in: jobIds } });
+        const applications = await Application.find({ job: { $in: jobIds } }) || [];
         const totalApplications = applications.length;
 
         // 3. Status Breakdown
@@ -145,7 +147,7 @@ export const getRecruiterStats = async (req, res) => {
         };
 
         applications.forEach(app => {
-            if (stats[app.status] !== undefined) {
+            if (app.status && stats[app.status] !== undefined) {
                 stats[app.status]++;
             }
         });
@@ -153,12 +155,14 @@ export const getRecruiterStats = async (req, res) => {
         // 4. Hire Rate
         const hireRate = totalApplications > 0
             ? ((stats.hired / totalApplications) * 100).toFixed(1)
-            : 0;
+            : "0.0";
 
         // 5. Job Performance (Top 5 jobs by application count)
         const jobStats = [...myJobs]
             .sort((a, b) => (b.applicants?.length || 0) - (a.applicants?.length || 0))
             .slice(0, 5);
+
+        console.log(`[Stats Success] Jobs: ${totalJobs}, Apps: ${totalApplications}`);
 
         return res.status(200).json({
             totalJobs,
@@ -166,12 +170,39 @@ export const getRecruiterStats = async (req, res) => {
             stats,
             hireRate,
             jobStats: jobStats.map(j => ({
-                title: j.title,
+                title: j.title || "Untitled Job",
                 count: j.applicants?.length || 0
             }))
         });
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Error fetching stats" });
+        console.error("Error in getRecruiterStats:", error);
+        return res.status(500).json({ message: "Internal server error fetching stats", error: error.message });
+    }
+};
+
+export const toggleFeaturedJob = async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const recruiterId = req.userId;
+
+        const job = await Job.findById(jobId);
+        if (!job) {
+            return res.status(404).json({ message: "Job not found" });
+        }
+
+        if (job.postedBy.toString() !== recruiterId) {
+            return res.status(403).json({ message: "You can only feature your own jobs" });
+        }
+
+        job.isFeatured = !job.isFeatured;
+        await job.save();
+
+        return res.status(200).json({
+            message: job.isFeatured ? "Job featured successfully" : "Job unfeatured successfully",
+            isFeatured: job.isFeatured
+        });
+    } catch (error) {
+        console.error("Error toggling featured job:", error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 };

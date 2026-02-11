@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/notification_model.dart';
 import '../models/job_model.dart';
 import '../models/application_model.dart';
 
@@ -72,67 +71,6 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Sign Up error: $e');
-    }
-  }
-
-  // Fetch Notifications
-  Future<List<NotificationModel>> fetchNotifications() async {
-    final token = await _getToken();
-    if (token == null) {
-      throw Exception('No token found');
-    }
-
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/notification/get'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => NotificationModel.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load notifications: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error fetching notifications: $e');
-    }
-  }
-
-  // Delete Notification
-  Future<void> deleteNotification(String id) async {
-    final token = await _getToken();
-    if (token == null) throw Exception('No token found');
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/notification/deleteone/$id'),
-      headers: {
-         'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete notification');
-    }
-  }
-
-   // Clear All Notifications
-  Future<void> clearAllNotifications() async {
-    final token = await _getToken();
-    if (token == null) throw Exception('No token found');
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/notification/'),
-      headers: {
-         'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to clear notifications');
     }
   }
 
@@ -342,12 +280,61 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to fetch analytics');
+      final errorMsg = jsonDecode(response.body)['message'] ?? 'Unknown error';
+      throw Exception('Failed to fetch analytics (${response.statusCode}): $errorMsg');
     }
+  }
+
+  Future<void> saveRole(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('role', role);
+  }
+
+  Future<String?> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('role');
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    await prefs.remove('role');
+  }
+
+  // --- Featured & Interviews ---
+
+  Future<void> toggleFeaturedJob(String jobId) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('No token found');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/jobs/featured/$jobId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to toggle featured status: ${response.body}');
+    }
+  }
+
+  Future<void> scheduleInterview(String applicationId, DateTime date, String location) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('No token found');
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/applications/schedule-interview/$applicationId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'interviewDate': date.toIso8601String(),
+        'interviewLocation': location,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to schedule interview: ${response.body}');
+    }
   }
 }

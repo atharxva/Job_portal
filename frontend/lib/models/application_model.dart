@@ -6,6 +6,8 @@ class ApplicationModel {
   final dynamic applicant; // String (id) or Map (user details)
   final String status;
   final DateTime createdAt;
+  final DateTime? interviewDate;
+  final String? interviewLocation;
 
   ApplicationModel({
     required this.id,
@@ -13,6 +15,8 @@ class ApplicationModel {
     required this.applicant,
     required this.status,
     required this.createdAt,
+    this.interviewDate,
+    this.interviewLocation,
   });
 
   factory ApplicationModel.fromJson(Map<String, dynamic> json) {
@@ -24,6 +28,8 @@ class ApplicationModel {
       applicant: json['applicant'], 
       status: json['status'] ?? 'applied',
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      interviewDate: json['interviewDate'] != null ? DateTime.parse(json['interviewDate']) : null,
+      interviewLocation: json['interviewLocation'],
     );
   }
 }

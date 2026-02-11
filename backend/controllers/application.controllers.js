@@ -98,3 +98,34 @@ export const withdrawApplication = async (req, res) => {
         return res.status(500).json({ message: "Error withdrawing application" });
     }
 };
+
+export const scheduleInterview = async (req, res) => {
+    try {
+        const { applicationId } = req.params;
+        const { interviewDate, interviewLocation } = req.body;
+
+        const application = await Application.findById(applicationId).populate('job');
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        // Only the recruiter who posted the job can schedule an interview
+        if (application.job.postedBy.toString() !== req.userId) {
+            return res.status(403).json({ message: "Unauthorized to schedule interview for this job" });
+        }
+
+        application.interviewDate = interviewDate;
+        application.interviewLocation = interviewLocation;
+        application.status = "interview"; // Automatically move to interview status
+
+        await application.save();
+
+        return res.status(200).json({
+            message: "Interview scheduled successfully",
+            application
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Error scheduling interview" });
+    }
+};

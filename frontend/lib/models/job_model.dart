@@ -12,6 +12,7 @@ class JobModel {
   final List<String> applicants;
   final DateTime createdAt;
   final bool isApplied;
+  final bool isFeatured;
 
   JobModel({
     required this.id,
@@ -27,6 +28,7 @@ class JobModel {
     required this.applicants,
     required this.createdAt,
     this.isApplied = false,
+    this.isFeatured = false,
   });
 
   factory JobModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class JobModel {
       applicants: List<String>.from(json['applicants'] ?? []),
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
       isApplied: json['isApplied'] ?? false,
+      isFeatured: json['isFeatured'] ?? false,
     );
   }
 }
